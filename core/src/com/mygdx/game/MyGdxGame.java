@@ -228,10 +228,10 @@ public class MyGdxGame extends ApplicationAdapter {
         Vector3 inertia;
 // box shape
         physicsObject = new physObj();
-        physObj.physObjects.add(physicsObject); // add to the phys objects for modelinstance rendering
         Vector3 size = new Vector3(1, 1, 1);
         physicsObject.shape = new btBoxShape(size);
-        physicsObject.shape.setUserIndex(physObj.physObjects.size());
+        physicsObject.shape.setUserIndex(physObj.physObjects.size()); // set index before add (or -1 the index!)
+        physObj.physObjects.add(physicsObject); // add to the phys objects for modelinstance rendering
         compoundShape.addChildShape(new Matrix4().idt().trn(1f, 1, 0), physicsObject.shape);
         physicsObject.modelInst = new ModelInstance(physObj.boxTemplateModel);
         physicsObject.modelInst.transform = new Matrix4().trn(1, 9, 1);  // trn only needed for testing non-compound shapes
@@ -251,9 +251,9 @@ public class MyGdxGame extends ApplicationAdapter {
 
 // ball shape
         physicsObject = new physObj();
-        physObj.physObjects.add(physicsObject); // add to the phys objects for modelinstance rendering
         physicsObject.shape = new btSphereShape(1);
-        physicsObject.shape.setUserIndex(physObj.physObjects.size());
+        physicsObject.shape.setUserIndex(physObj.physObjects.size()); // set index before add (or -1 the index!)
+        physObj.physObjects.add(physicsObject); // add to the phys objects for modelinstance rendering
         compoundShape.addChildShape(new Matrix4().idt().trn(0, 0, 0), physicsObject.shape);
         physicsObject.modelInst = new ModelInstance(physObj.ballTemplateModel);
         physicsObject.modelInst.transform = new Matrix4().trn(0, 9, 0); // trn only needed for testing non-compound shapes
