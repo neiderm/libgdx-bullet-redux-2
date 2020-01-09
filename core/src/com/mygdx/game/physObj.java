@@ -52,28 +52,29 @@ public class physObj {
     public btRigidBody.btRigidBodyConstructionInfo bodyInfo;
     public btRigidBody body;
     public static btDynamicsWorld collisionWorld;
-    public final Vector3 scale;
+    public //final
+            Vector3 scale;
 
 
-    public physObj(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
-        if (tp == pType.BOX) {
-            shape = new btBoxShape(sz);
-            modelInst = new ModelInstance(boxTemplateModel);
-        }
+    public physObj(){ // mt
+    }
 
-        if (tp == pType.SPHERE) {
-            sz.y = sz.x;
-            sz.z = sz.x; // sphere must be symetrical!
-            shape = new btSphereShape(sz.x);
-            modelInst = new ModelInstance(ballTemplateModel);
-        }
+//    public physObj(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
+//
+//        create(tp, sz, mass, transform);
+//    }
 
-        modelInst.transform = transform.cpy();
+
+// only for the landscape right now
+    public void addBody( Vector3 sz){
+
+        float mass = 0;
+
         scale = sz.cpy();
 
         if (mass == 0) {
             modelInst.transform.scl(sz);
-            tmp = Vector3.Zero;
+            tmp = Vector3.Zero; // Vector3.Zero.copy()  ?
             motionstate = null;
         } else {
             shape.calculateLocalInertia(mass, tmp);
@@ -94,12 +95,17 @@ public class physObj {
     }
 
     public void dispose() {
-        body.dispose();
+        if (null != body) { // no body added for comp shape
+            body.dispose();
+        }
+
         shape.dispose();
-        bodyInfo.dispose();
-//		motionstate.dispose();  body deletion does this?
+
+        if (null != bodyInfo) { // no body info added for comp shape
+            bodyInfo.dispose();
+        }
+        //		motionstate.dispose();  body deletion does this?
 
         physObjects.remove(this);
-
     }
 }
