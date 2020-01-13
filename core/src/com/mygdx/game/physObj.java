@@ -14,6 +14,7 @@ import java.util.ArrayList;
 
 public class physObj {
 
+    static public final boolean SET_NODE_SCALE = true;
 
 
     public static class MotionState extends btMotionState {
@@ -52,10 +53,10 @@ public class physObj {
     public btRigidBody.btRigidBodyConstructionInfo bodyInfo;
     public btRigidBody body;
     public static btDynamicsWorld collisionWorld;
-    public final Vector3 scale;
+    public  Vector3 scale;
 
 
-    public physObj(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
+    private void create(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
         if (tp == pType.BOX) {
             shape = new btBoxShape(sz);
             modelInst = new ModelInstance(boxTemplateModel);
@@ -69,10 +70,13 @@ public class physObj {
         }
 
         modelInst.transform = transform.cpy();
-        scale = sz.cpy();
+        scale = new Vector3(sz);
 
         if (mass == 0) {
-            modelInst.transform.scl(sz);
+
+ if (! SET_NODE_SCALE) {
+     modelInst.transform.scl(sz);
+ }
             tmp = Vector3.Zero;
             motionstate = null;
         } else {
@@ -84,14 +88,30 @@ public class physObj {
         body = new btRigidBody(bodyInfo);
         body.setFriction(0.8f);
 
+  if (true){         //how  i set up pgge
+      this.body.setWorldTransform(modelInst.transform);
+   }    else{
+
         if (mass == 0) {
             body.translate(tmp.set(modelInst.transform.val[12], modelInst.transform.val[13], modelInst.transform.val[14]));
         }
+ }
 
-        collisionWorld.addRigidBody(body);
+if (SET_NODE_SCALE) {
+    modelInst.nodes.get(0).scale.set(sz);
+    modelInst.calculateTransforms();
+}
+
+//        collisionWorld.addRigidBody(body);
 
         physObjects.add(this);
     }
+
+    public physObj(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
+        create(tp, sz, mass, transform);
+        collisionWorld.addRigidBody(body);
+    }
+
 
     public void dispose() {
         body.dispose();

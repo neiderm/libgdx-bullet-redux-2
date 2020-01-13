@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -21,6 +20,7 @@ import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.bullet.Bullet;
+import com.badlogic.gdx.physics.bullet.DebugDrawer;
 import com.badlogic.gdx.physics.bullet.collision.btBroadphaseInterface;
 import com.badlogic.gdx.physics.bullet.collision.btBvhTriangleMeshShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionConfiguration;
@@ -33,6 +33,7 @@ import com.badlogic.gdx.physics.bullet.dynamics.btDiscreteDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btDynamicsWorld;
 import com.badlogic.gdx.physics.bullet.dynamics.btRigidBody;
 import com.badlogic.gdx.physics.bullet.dynamics.btSequentialImpulseConstraintSolver;
+import com.badlogic.gdx.physics.bullet.linearmath.btIDebugDraw;
 
 import java.util.Iterator;
 import java.util.Random;
@@ -63,6 +64,10 @@ public class MyGdxGame extends ApplicationAdapter {
 	public Random rnd = new Random();
 	private final ModelBuilder modelBuilder = new ModelBuilder();
 
+    private DebugDrawer debugDrawer;
+    private static      final boolean USE_DDBUG_DRAW = false;
+
+
 	@Override
 	public void render() {
 
@@ -85,15 +90,18 @@ public class MyGdxGame extends ApplicationAdapter {
 			physObj pob = it.next();
 
 			if (pob.body.isActive()) {  // gdx bullet used to leave scaling alone which was rather useful...
-				pob.modelInst.transform.mul(tmpM.setToScaling(pob.scale));
+if (! physObj.SET_NODE_SCALE) {
+    pob.modelInst.transform.mul(tmpM.setToScaling(pob.scale));
+}
 				pob.motionstate.getWorldTransform(tmpM);
 				tmpM.getTranslation(tmpV);
-				if (tmpV.y<-10) {
-					tmpM.setToTranslation(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
-					pob.body.setWorldTransform(tmpM);
-					pob.body.setAngularVelocity(Vector3.Zero);
-					pob.body.setLinearVelocity(Vector3.Zero);
-				}
+
+                if (tmpV.y < -10) {
+                    tmpM.setToTranslation(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
+                    pob.body.setWorldTransform(tmpM);
+                    pob.body.setAngularVelocity(Vector3.Zero);
+                    pob.body.setLinearVelocity(Vector3.Zero);
+                }
 			}
 
 			// TODO
@@ -102,6 +110,9 @@ public class MyGdxGame extends ApplicationAdapter {
 
 			modelBatch.render(pob.modelInst, environment);
 
+            debugDrawer.begin(cam);
+            collisionWorld.debugDrawWorld();
+            debugDrawer.end();
 		}
 
 		modelBatch.render(landscapeInstance, environment);
@@ -175,22 +186,30 @@ public class MyGdxGame extends ApplicationAdapter {
 
 
 		// uncomment for a terrain alternative;
-		//tmpM.idt().trn(0, -4, 0);
-		//new physObj(physObj.pType.BOX, tmpV.set(20f, 1f, 20f), 0, tmpM);	// zero mass = static
+		tmpM.idt().trn(0, -4, 0);
+		new physObj(physObj.pType.BOX, tmpV.set(20f, 1f, 20f), 0, tmpM);	// zero mass = static
+
 		tmpM.idt().trn(10, -5, 0);
 		new physObj(physObj.pType.SPHERE, tmpV.set(8f, 8f, 8f), 0, tmpM);
 
-		for (int i = 0; i < 300; i++) {
+		for (int i = 0; i < 10; i++) {
 			tmpV.set(rnd.nextFloat() + .1f, rnd.nextFloat() + .1f, rnd.nextFloat() + .1f);
 			tmpM.idt().trn(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
 			physObj.pType tp;
 			tp = physObj.pType.BOX;
-			if (i > 200) {
+			if (i > 5) {
 				tp = physObj.pType.SPHERE;
 			}
 			new physObj(tp, tmpV.cpy(), rnd.nextFloat() + 0.5f, tmpM);
 		}
 
+
+        debugDrawer = new DebugDrawer();
+        debugDrawer.setDebugMode(btIDebugDraw.DebugDrawModes.DBG_MAX_DEBUG_DRAW_MODE);
+
+        if (USE_DDBUG_DRAW) {
+            collisionWorld.setDebugDrawer(debugDrawer);
+        }
 	}
 
 	@Override
