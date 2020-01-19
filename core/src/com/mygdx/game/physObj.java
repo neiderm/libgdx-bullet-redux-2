@@ -56,7 +56,8 @@ public class physObj {
     public  Vector3 scale;
 
 
-    private void create(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
+    public physObj(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
+
         if (tp == pType.BOX) {
             shape = new btBoxShape(sz);
             modelInst = new ModelInstance(boxTemplateModel);
@@ -74,9 +75,9 @@ public class physObj {
 
         if (mass == 0) {
 
- if (! SET_NODE_SCALE) {
-     modelInst.transform.scl(sz);
- }
+            if (! SET_NODE_SCALE) {
+                modelInst.transform.scl(sz);
+            }
             tmp = Vector3.Zero;
             motionstate = null;
         } else {
@@ -87,36 +88,62 @@ public class physObj {
         bodyInfo = new btRigidBody.btRigidBodyConstructionInfo(mass, motionstate, shape, tmp.cpy());
         body = new btRigidBody(bodyInfo);
         body.setFriction(0.8f);
+bodyInfo.dispose();
 
-  if (true){         //how  i set up pgge
-      this.body.setWorldTransform(modelInst.transform);
-   }    else{
+        if (true){         //how  i set up pgge
+            this.body.setWorldTransform(modelInst.transform);
+        }    else{
 
-        if (mass == 0) {
-            body.translate(tmp.set(modelInst.transform.val[12], modelInst.transform.val[13], modelInst.transform.val[14]));
+            if (mass == 0) {
+                body.translate(tmp.set(modelInst.transform.val[12], modelInst.transform.val[13], modelInst.transform.val[14]));
+            }
         }
- }
 
-if (SET_NODE_SCALE) {
-    modelInst.nodes.get(0).scale.set(sz);
-    modelInst.calculateTransforms();
-}
-
-//        collisionWorld.addRigidBody(body);
+        if (SET_NODE_SCALE) {
+            modelInst.nodes.get(0).scale.set(sz);
+            modelInst.calculateTransforms();
+        }
 
         physObjects.add(this);
-    }
 
-    public physObj(pType tp, Vector3 sz, float mass, final Matrix4 transform) {
-        create(tp, sz, mass, transform);
         collisionWorld.addRigidBody(body);
     }
 
 
+    public physObj(
+            btCompoundShape compoundShape, Vector3 localTrans,
+            pType tp, Vector3 sz) {
+
+        if (tp == pType.BOX) {
+            shape = new btBoxShape(sz);
+            modelInst = new ModelInstance(boxTemplateModel);
+        }
+        if (tp == pType.SPHERE) {
+            sz.y = sz.x;
+            sz.z = sz.x; // sphere must be symetrical!
+            shape = new btSphereShape(sz.x);
+            modelInst = new ModelInstance(ballTemplateModel);
+        }
+        physObjects.add(this);
+
+
+        // child of comp shape must be renderd but does not add to collision wolrd
+        int index = physObjects.size() - 1; // set index before add (or -1 the index!)
+        this.shape.setUserIndex( index );
+
+        this.modelInst.nodes.get(0).localTransform.setToTranslation(localTrans); // this would come from external model
+        compoundShape.addChildShape(new Matrix4().idt().trn(localTrans), this.shape);
+    }
+
+
     public void dispose() {
-        body.dispose();
+if (null != body) {
+    body.dispose();
+}
         shape.dispose();
-        bodyInfo.dispose();
+if (null != bodyInfo) {
+    bodyInfo.dispose();
+}
 //		motionstate.dispose();  body deletion does this?
 
         physObjects.remove(this);

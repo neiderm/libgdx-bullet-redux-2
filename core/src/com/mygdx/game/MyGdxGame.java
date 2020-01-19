@@ -26,6 +26,7 @@ import com.badlogic.gdx.physics.bullet.collision.btBvhTriangleMeshShape;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionConfiguration;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionDispatcher;
 import com.badlogic.gdx.physics.bullet.collision.btCollisionShape;
+import com.badlogic.gdx.physics.bullet.collision.btCompoundShape;
 import com.badlogic.gdx.physics.bullet.collision.btDbvtBroadphase;
 import com.badlogic.gdx.physics.bullet.collision.btDefaultCollisionConfiguration;
 import com.badlogic.gdx.physics.bullet.dynamics.btConstraintSolver;
@@ -64,8 +65,15 @@ public class MyGdxGame extends ApplicationAdapter {
 	public Random rnd = new Random();
 	private final ModelBuilder modelBuilder = new ModelBuilder();
 
+
     private DebugDrawer debugDrawer;
-    private static      final boolean USE_DDBUG_DRAW = false;
+    private static      final boolean USE_DDBUG_DRAW = true;
+    private static      final boolean     TRY_COMP_SHAPE = true;
+
+    private btCompoundShape compoundShape;
+    private physObj.MotionState compMotionstate;
+    private btRigidBody.btRigidBodyConstructionInfo compBodyInfo;
+    private btRigidBody compBody;
 
 
 	@Override
@@ -83,41 +91,65 @@ public class MyGdxGame extends ApplicationAdapter {
 		// increase itterations for more accurate but slower sim
 		collisionWorld.stepSimulation(Gdx.graphics.getDeltaTime(), 5);
 
+
+        if (TRY_COMP_SHAPE) {
+// update mesh parts to compound shape
+            Matrix4 compBodyTransform = compBody.getWorldTransform();
+
+// for each child shapes, link back to it's model instance thru the object
+            for (int x = 0; x < compoundShape.getNumChildShapes(); x++) {
+
+                btCollisionShape bcs = compoundShape.getChildShape(x);
+                physObj pob = physObj.physObjects.get(bcs.getUserIndex());
+                ModelInstance mi = pob.modelInst;
+
+                // assumes only the single node in this model instance
+                tmpV = mi.nodes.get(0).localTransform.getTranslation(tmpV);
+                mi.transform.set(compBodyTransform);
+                mi.transform.translate(tmpV);
+
+                // child model instance could be rendered here
+            }
+        }
+
+
 		modelBatch.begin(cam);
 
 		Iterator<physObj> it = physObj.physObjects.iterator();
 		while (it.hasNext()) {
 			physObj pob = it.next();
 
-			if (pob.body.isActive()) {  // gdx bullet used to leave scaling alone which was rather useful...
-if (! physObj.SET_NODE_SCALE) {
-    pob.modelInst.transform.mul(tmpM.setToScaling(pob.scale));
+if (null != pob.body) {
+    if (pob.body.isActive()) {  // gdx bullet used to leave scaling alone which was rather useful...
+        if (!physObj.SET_NODE_SCALE) {
+            pob.modelInst.transform.mul(tmpM.setToScaling(pob.scale));
+        }
+        pob.motionstate.getWorldTransform(tmpM);
+        tmpM.getTranslation(tmpV);
+
+        if (tmpV.y < -10) {
+            tmpM.setToTranslation(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
+            pob.body.setWorldTransform(tmpM);
+            pob.body.setAngularVelocity(Vector3.Zero);
+            pob.body.setLinearVelocity(Vector3.Zero);
+        }
+    }
 }
-				pob.motionstate.getWorldTransform(tmpM);
-				tmpM.getTranslation(tmpV);
-
-                if (tmpV.y < -10) {
-                    tmpM.setToTranslation(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
-                    pob.body.setWorldTransform(tmpM);
-                    pob.body.setAngularVelocity(Vector3.Zero);
-                    pob.body.setLinearVelocity(Vector3.Zero);
-                }
-			}
-
 			// TODO
 			// while we're looping all the physics objects we might as well
 			// update them (ie game logic)
 
 			modelBatch.render(pob.modelInst, environment);
-
-            debugDrawer.begin(cam);
-            collisionWorld.debugDrawWorld();
-            debugDrawer.end();
 		}
 
 		modelBatch.render(landscapeInstance, environment);
 		modelBatch.end();
-	}
+
+        debugDrawer.begin(cam);
+        collisionWorld.debugDrawWorld();
+        debugDrawer.end();
+
+    }
 
 	@Override
 	public void create() {
@@ -186,22 +218,52 @@ if (! physObj.SET_NODE_SCALE) {
 
 
 		// uncomment for a terrain alternative;
+
 		tmpM.idt().trn(0, -4, 0);
 		new physObj(physObj.pType.BOX, tmpV.set(20f, 1f, 20f), 0, tmpM);	// zero mass = static
 
-		tmpM.idt().trn(10, -5, 0);
-		new physObj(physObj.pType.SPHERE, tmpV.set(8f, 8f, 8f), 0, tmpM);
+//		tmpM.idt().trn(10, -5, 0);
+//		new physObj(physObj.pType.SPHERE, tmpV.set(8f, 8f, 8f), 0, tmpM);
 
-		for (int i = 0; i < 10; i++) {
-			tmpV.set(rnd.nextFloat() + .1f, rnd.nextFloat() + .1f, rnd.nextFloat() + .1f);
-			tmpM.idt().trn(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
-			physObj.pType tp;
-			tp = physObj.pType.BOX;
-			if (i > 5) {
-				tp = physObj.pType.SPHERE;
-			}
-			new physObj(tp, tmpV.cpy(), rnd.nextFloat() + 0.5f, tmpM);
-		}
+if (! TRY_COMP_SHAPE) {
+    for (int i = 0; i < 10; i++) {
+        tmpV.set(rnd.nextFloat() + .1f, rnd.nextFloat() + .1f, rnd.nextFloat() + .1f);
+        tmpM.idt().trn(rnd.nextFloat() * 10.0f - 5f, rnd.nextFloat() + 25f, rnd.nextFloat() * 10.0f - 5f);
+        physObj.pType tp;
+        tp = physObj.pType.BOX;
+        if (i > 5) {
+            tp = physObj.pType.SPHERE;
+        }
+        new physObj(tp, tmpV.cpy(), rnd.nextFloat() + 0.5f, tmpM);
+    }
+} else {
+
+    compoundShape =  new btCompoundShape();
+///*
+    new physObj(compoundShape, new Vector3(1, 1, 0),
+            physObj.pType.BOX, new Vector3(1.5f, 1.5f, 1.5f));
+
+    new physObj(compoundShape, new Vector3(0, 0, 0),
+            physObj.pType.SPHERE, new Vector3(1.75f, 1.75f, 1.75f));
+//*/
+    // create compound shape and body
+//    if (TRY_COMP_SHAPE)
+    {
+        Vector3 inertia = new Vector3();
+        float mass = 1 + 1; // for the two objects of unit mass that I am combining
+        compoundShape.calculateLocalInertia(mass, inertia);
+
+        Matrix4 compTransform = new Matrix4().trn(0, 9, 0);
+        compMotionstate = new physObj.MotionState(compTransform);
+
+        compBodyInfo =
+                new btRigidBody.btRigidBodyConstructionInfo(
+                        mass, compMotionstate, compoundShape, inertia);
+        compBody = new btRigidBody(compBodyInfo);
+        compBody.setFriction(0.8f);
+        collisionWorld.addRigidBody(compBody);
+    }
+}
 
 
         debugDrawer = new DebugDrawer();
