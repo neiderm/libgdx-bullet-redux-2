@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -41,7 +40,6 @@ public class MyGdxGame extends ApplicationAdapter {
 
 	public Environment environment;
 	public PerspectiveCamera cam;
-	public Model model;
 	public ModelBatch modelBatch;
 
 	public CameraInputController camController;
@@ -56,7 +54,6 @@ public class MyGdxGame extends ApplicationAdapter {
 	btConstraintSolver solver;
 	btDynamicsWorld collisionWorld;
 
-	private Model landscapeModel;
 	private ModelInstance landscapeInstance;
 
 	Vector3 gravity = new Vector3(0, -9.81f, 0);
@@ -147,23 +144,21 @@ public class MyGdxGame extends ApplicationAdapter {
 
 
 		Texture cubeTex = new Texture(Gdx.files.internal("data/crate.png"), false);
-		Model cube = modelBuilder.createBox(2f, 2f, 2f,
+		physObj.boxTemplateModel = modelBuilder.createBox(2f, 2f, 2f,
 				new Material(TextureAttribute.createDiffuse(cubeTex)),
-				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
-		physObj.boxTemplateModel = cube;  // must set the visual templates before using.
+				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);  // must set the visual templates before using.
 
 		Texture sphereTex = new Texture(Gdx.files.internal("data/day.png"),false);
-		Model ball = modelBuilder.createSphere(2f, 2f, 2f, 16, 16,
+		physObj.ballTemplateModel = modelBuilder.createSphere(2f, 2f, 2f, 16, 16,
 				new Material(TextureAttribute.createDiffuse(sphereTex)),
 				VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal | VertexAttributes.Usage.TextureCoordinates);
-		physObj.ballTemplateModel = ball;
 
 		physObj.collisionWorld = collisionWorld;
 
 
 		// little point putting static meshes in a convenience wrapper
 		// as you only have a few and don't spawn them repeatedly
-
+		Model landscapeModel;
 		landscapeModel = assets.get("data/landscape.g3db", Model.class);
 		btCollisionShape triMesh = (btCollisionShape)new btBvhTriangleMeshShape(landscapeModel.meshParts);
 		// put the landscape at an angle so stuff falls of it...
